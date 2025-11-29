@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  regression-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # 3. Install dependencies
+      - name: Install packages
+        run: npm install
+
+      # 4. Start API server (node server.js)
+      - name: Start API server
+        run: |
+          nohup node server.js &
+          sleep 10  # wait for server to boot
+
+      # 5. Install Postman CLI
+      - name: Install Postman CLI
+        run: |
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+          postman --version
+
+      # 6. Authenticate Postman CLI
+      - name: Login to Postman CLI
+        run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
+
+      # 7. Run regression tests
+      - name: Run Postman regression tests
+        run: |
+          postman collection run 44588388-1d0fb5a9-1eb0-4a17-99f7-0f6ebb6d88aa -e 44588388-54726f03-5eb6-417a-8bfc-2ed8f7ea3f0f --iteration-count 5 --reporters cli,json
